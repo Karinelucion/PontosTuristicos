@@ -18,9 +18,11 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Looper
+import androidx.core.content.ContentProviderCompat
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
@@ -58,6 +60,7 @@ class MapaActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -96,7 +99,7 @@ class MapaActivity : AppCompatActivity(), OnMapReadyCallback {
             val lon = cursor.getDouble(cursor.getColumnIndexOrThrow("lon"))
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 12f))
         }
-
+        applyMapSettings()
         cursor.close()
     }
 
@@ -111,10 +114,7 @@ class MapaActivity : AppCompatActivity(), OnMapReadyCallback {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location: Location = locationResult.lastLocation ?: return
-                println("Entrou aqui")
                 ultimaLocalizacao = location
-                println(location.latitude)
-                println(location.longitude)
 
                 val currentLatLng = LatLng(location.latitude, location.longitude)
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
@@ -145,8 +145,6 @@ class MapaActivity : AppCompatActivity(), OnMapReadyCallback {
         ultimaLocalizacao?.let {
             intent.putExtra("LATITUDE", it.latitude)
             intent.putExtra("LONGITUDE", it.longitude)
-            println(it.latitude)
-            println(it.longitude)
         }
 
         startActivity(intent)
@@ -155,4 +153,20 @@ class MapaActivity : AppCompatActivity(), OnMapReadyCallback {
         val intent = Intent(this, ListarPontosTuristicos::class.java)
         startActivity(intent)
     }
+
+    fun btConfigOnClick(view: View) {
+        val intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun applyMapSettings() {
+        val sharedPref = getSharedPreferences("map_prefs", MODE_PRIVATE)
+
+        val defaultZoom = sharedPref.getInt("default_zoom", 12).toFloat()
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(defaultZoom))
+
+        val mapType = sharedPref.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        mMap.mapType = mapType
+    }
+
 }
