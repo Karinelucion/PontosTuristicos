@@ -31,28 +31,38 @@ class IncluirPontoTuristico : AppCompatActivity() {
 
     private lateinit var binding: ElementoIncluirBinding
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private var fotoSelecionada: Bitmap? = null
+    private var idPonto: Int? = null
     private lateinit var pontoTuristicoRepository: PontoTuristicoRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ElementoIncluirBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        pontoTuristicoRepository = PontoTuristicoRepository(this)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        val latitude  = intent.getDoubleExtra("LATITUDE", 0.0)
-        val longitude = intent.getDoubleExtra("LONGITUDE", 0.0)
 
-        val etLatitude = findViewById<EditText>(R.id.editTextLatitude)
-        val etLongitude = findViewById<EditText>(R.id.editTextLongitude)
+        idPonto = intent.getIntExtra("ID", -1).takeIf { it != -1 }
 
-        etLatitude.setText(latitude.toString())
-        etLongitude.setText(longitude.toString())
+        if (idPonto != null) {
+            carregarDadosParaEdicao(idPonto!!)
+        } else {
+            val latitude  = intent.getDoubleExtra("LATITUDE", 0.0)
+            val longitude = intent.getDoubleExtra("LONGITUDE", 0.0)
+
+            val etLatitude = findViewById<EditText>(R.id.editTextLatitude)
+            val etLongitude = findViewById<EditText>(R.id.editTextLongitude)
+
+            etLatitude.setText(latitude.toString())
+            etLongitude.setText(longitude.toString())
 
 
-        getDescricao(latitude.toString(), longitude.toString())
+            getDescricao(latitude.toString(), longitude.toString())
+
+        }
+
 
         pontoTuristicoRepository = PontoTuristicoRepository(this)
 
@@ -61,7 +71,19 @@ class IncluirPontoTuristico : AppCompatActivity() {
         }
     }
 
+    private fun carregarDadosParaEdicao(id: Int) {
+        val ponto = pontoTuristicoRepository.getById(id)
+        binding.editTextNome.setText(ponto.nome)
+        binding.editTextDescricao.setText(ponto.descricao)
+        binding.editTextLatitude.setText(ponto.lat.toString())
+        binding.editTextLongitude.setText(ponto.lon.toString())
 
+        ponto.img?.let {
+            val bmp = android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size)
+            binding.ivFoto.setImageBitmap(bmp)
+            fotoSelecionada = bmp
+        }
+    }
 
     val register = registerForActivityResult(ActivityResultContracts.TakePicturePreview()){
             image : Bitmap? -> image?.let {
@@ -77,21 +99,38 @@ class IncluirPontoTuristico : AppCompatActivity() {
         }
     }
 
-
     fun btSalvarOnClick(view: View) {
         val nome = binding.editTextNome.text.toString()
         val descricao = binding.editTextDescricao.text.toString()
-        val latitude = binding.editTextLatitude.text.toString().toDoubleOrNull() ?: 0.05
-        val longitude = binding.editTextLongitude.text.toString().toDoubleOrNull() ?: 0.05
-
+        val latitude = binding.editTextLatitude.text.toString().toDoubleOrNull() ?: 0.0
+        val longitude = binding.editTextLongitude.text.toString().toDoubleOrNull() ?: 0.0
         val imgBT = fotoSelecionada?.let { bitmapToBlob(it) }
 
-        val pontoTuristico = PontoTuristico(0, descricao, nome, latitude, longitude, imgBT)
-
-        pontoTuristicoRepository.salvarPontoTuristico(pontoTuristico)
+        if (idPonto != null) {
+            val pontoExistente = pontoTuristicoRepository.getById(idPonto!!)
+            val pontoAtualizado = pontoExistente.copy(
+                nome = nome,
+                descricao = descricao,
+                lat = latitude,
+                lon = longitude,
+                img = imgBT ?: pontoExistente.img
+            )
+            pontoTuristicoRepository.atualizarPontoTuristico(pontoAtualizado)
+        } else {
+            val novoPonto = PontoTuristico(
+                _id = 0,
+                descricao = descricao,
+                nome = nome,
+                lat = latitude,
+                lon = longitude,
+                img = imgBT
+            )
+            pontoTuristicoRepository.salvarPontoTuristico(novoPonto)
+        }
 
         val intent = Intent(this, MapaActivity::class.java)
         startActivity(intent)
+        finish()
     }
 
     fun bitmapToBlob( bitmap: Bitmap) : ByteArray {

@@ -2,6 +2,7 @@ package br.edu.utpr.pontoturistico.screens
 
 import DatabaseHandler
 import android.os.Bundle
+import android.view.View
 import android.widget.ListView
 import androidx.appcompat.app.AppCompatActivity
 import br.edu.utpr.pontoturistico.adapter.PontoTuristicoAdapter
@@ -29,4 +30,6 @@ class ListarPontosTuristicos : AppCompatActivity()  {
         val adapter = PontoTuristicoAdapter( this, registros )
         lvPontosTuristicos.adapter = adapter
     }
+
+
 }
